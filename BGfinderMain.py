@@ -1,6 +1,6 @@
 import sys
 import io
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox
 from PyQt5 import uic
 import sqlite3
 import time
@@ -19,10 +19,16 @@ class WrongName(Exception):
     def __init__(self, name):
         self.name = name
         self.names = db.cur.execute('select name from data').fetchall()
-        self.possible_results()
+        if not self.in_names():
+            self.possible_results()
+
+    def in_names(self):
+        return any([i[0] == self.name for i in self.names])
 
     def __str__(self):
-        return 'ERROR: Wrong name'
+        if not self.in_names():
+            return 'ERROR: Wrong name'
+        return ''
 
     def possible_results(self):
         possible_names = list()
@@ -34,9 +40,13 @@ class WrongName(Exception):
                     s += 1
             if s / len(possible_set) * 100 > 50 or name[0] in self.name:
                 possible_names.append(name[0])
-        print(f'Возможно вы имели ввиду {", ".join(possible_names)}?')
-        ex.textBrowser.setText('')
-        ex.textBrowser.setText(f'Возможно вы имели ввиду {", ".join(possible_names)}?')
+
+        print(f'Возможно вы имели ввиду {", ".join(possible_names)}?' if possible_names else 'Ничего не найдено')
+        if not self.in_names() and possible_names:
+            ex.create_dialog(", ".join(possible_names))
+
+        """ex.textBrowser.setText('')
+        ex.textBrowser.setText(f'Возможно вы имели ввиду {", ".join(possible_names)}?')"""
 
 
 class DatabaseQuery:
@@ -157,6 +167,7 @@ class BGFWindow(QMainWindow):
             self.player_count.addItem(i[0])
         for i in db.cur.execute('''select distinct time from data''').fetchall():
             self.game_time.addItem(i[0])
+
         self.timer = 0
         self.statusBar()
         self.init_ui()
@@ -166,7 +177,7 @@ class BGFWindow(QMainWindow):
         the function sets the name of the window and fixes its size
         :return: None
         """
-        self.setWindowTitle('BGFinder0.0.3')
+        self.setWindowTitle('BGFinder0.0.5')
         self.setFixedSize(630, 480)
         self.find_button.clicked.connect(self.find_games)
 
@@ -182,6 +193,10 @@ class BGFWindow(QMainWindow):
                                            self.rec_age.currentText(), self.game_time.currentText(),
                                            self.game_name.text().capitalize()))
 
+    def find_by_name(self, name):
+        self.game_name.setText(name)
+        self.find_games()
+
     def plain_text(self, text):
         """
         the function sets the text in the output field
@@ -196,6 +211,7 @@ class BGFWindow(QMainWindow):
             4: 'Сложность игры: ',
             5: 'Краткое описание:\n'
         }
+        self.textBrowser.setText('')
         for i in text:
             for j in range(6):
                 self.textBrowser.setText(self.textBrowser.toPlainText() + form[j] +
@@ -208,6 +224,17 @@ class BGFWindow(QMainWindow):
 
     def print_timer(self, string):
         print(string)
+
+    def create_dialog(self, game_name):
+        msg = QMessageBox(self)
+        msg.setText(f'Возможно вы имели ввиду {game_name}?')
+        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        result = msg.exec_()
+        if result == 65536:
+            self.textBrowser.setText('По вашему запросу ничего не найдено.')
+        elif result == 16384:
+            self.game_name.setText(game_name)
+            self.find_by_name(game_name)
 
     """def finder(self, query):
         return db.cur.execute(query).fetchall()[0][0]
