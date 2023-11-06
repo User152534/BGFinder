@@ -169,7 +169,7 @@ class DatabaseQuery:
 class BGFWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        f = io.StringIO(open('BGFinder_design0.0.4.ui', encoding='utf8').read())
+        f = io.StringIO(open('BGFinder_design0.0.5.ui', encoding='utf8').read())
         uic.loadUi(f, self)
         for i in db.cur.execute('''select distinct age from data''').fetchall():
             self.rec_age.addItem(i[0])
@@ -188,7 +188,7 @@ class BGFWindow(QMainWindow):
         :return: None
         """
         self.setWindowTitle('BGFinder0.0.5')
-        self.setFixedSize(630, 480)
+        self.setFixedSize(800, 600)
         self.find_button.clicked.connect(self.find_games)
 
     def find_games(self):
@@ -274,8 +274,10 @@ if __name__ == '__main__':
 
 """
 идеи:
-1. сделать поиск похожих по названию (если пользователь ошибся в названии)                -
+1. сделать поиск похожих по названию (если пользователь ошибся в названии)                ✓
 2. Написать свои ошибки для разных ситуаций (ошибка при выводе и тд.)                     ✓
 3. Разделить функцию query_generator класса DatabaseQuery на несколько маленьких          ✓
-4. Написать doc-string к каждой функции                                                   ~
+4. Написать doc-string к каждой функции                                                   ✓
+5. Заменить текстовый виджет на QScrollArea                                               -
+6. Добавить возможность добавлять игры в избранное                                        -
 """
