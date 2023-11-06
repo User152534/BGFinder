@@ -23,6 +23,10 @@ class WrongName(Exception):
             self.possible_results()
 
     def in_names(self):
+        """
+        the function checks whether at least one game name from the database matches the one entered
+        :return: bool
+        """
         return any([i[0] == self.name for i in self.names])
 
     def __str__(self):
@@ -31,6 +35,10 @@ class WrongName(Exception):
         return ''
 
     def possible_results(self):
+        """
+        the function checks if there are games with a similar name in the database
+        :return: None
+        """
         possible_names = list()
         for name in self.names:
             possible_set = set(name[0] + self.name)
@@ -56,9 +64,9 @@ class DatabaseQuery:
 
     def query_generator(self, *values):
         """
-        the function ...
-        :param values:
-        :return:
+        the function generates and returns an sql query
+        :param values: tuple
+        :return: str
         """
         game_diff, player_count, rec_age, game_time, game_name = values
 
@@ -88,12 +96,17 @@ class DatabaseQuery:
         return result
 
     def print_sql_to_console(self, sql):
+        """
+        the function outputs the generated sql query to the console
+        :param sql: str
+        :return: None
+        """
         print(sql)
 
     def difficulty_sql_generate(self, difficulty):
         """
-        the function ...
-        :param difficulty:
+        the function generates the part of the sql query responsible for the difficulty of the game
+        :param difficulty: str
         :return: str
         """
         if difficulty != 'Любая':
@@ -103,9 +116,9 @@ class DatabaseQuery:
 
     def players_sql_generate(self, difficulty, player_count):
         """
-        the function ...
-        :param difficulty:
-        :param player_count:
+        the function generates the part of the sql query responsible for the number of players for the game
+        :param difficulty: str
+        :param player_count: str
         :return: str
         """
         if player_count != 'Любое':
@@ -114,10 +127,10 @@ class DatabaseQuery:
 
     def age_sql_generate(self, difficulty, player_count, rec_age):
         """
-        the function ...
-        :param difficulty:
-        :param player_count:
-        :param rec_age:
+        the function generates the part of the sql query responsible for the age limit of the players
+        :param difficulty: str
+        :param player_count: str
+        :param rec_age: str
         :return: str
         """
         if rec_age != 'Для всех возрастов':
@@ -126,11 +139,11 @@ class DatabaseQuery:
 
     def time_sql_generate(self, difficulty, player_count, rec_age, game_time):
         """
-        the function ...
-        :param difficulty:
-        :param player_count:
-        :param rec_age:
-        :param game_time:
+        the function generates the part of the sql query responsible for the time of one game party
+        :param difficulty: str
+        :param player_count: str
+        :param rec_age: str
+        :param game_time: str
         :return: str
         """
         if game_time != 'Неограниченно':
@@ -139,12 +152,12 @@ class DatabaseQuery:
 
     def name_sql_generate(self, difficulty, player_count, rec_age, game_time, game_name):
         """
-        the function ...
-        :param difficulty:
-        :param player_count:
-        :param rec_age:
-        :param game_time:
-        :param game_name:
+        the function generates the part of the sql query responsible for the name of the game
+        :param difficulty: str
+        :param player_count: str
+        :param rec_age: str
+        :param game_time: str
+        :param game_name: str
         :return: str
         """
         if game_name != '':
@@ -155,9 +168,6 @@ class DatabaseQuery:
 
 class BGFWindow(QMainWindow):
     def __init__(self):
-        """
-        the function initializes the class with the application window
-        """
         super().__init__()
         f = io.StringIO(open('BGFinder_design0.0.4.ui', encoding='utf8').read())
         uic.loadUi(f, self)
@@ -194,6 +204,11 @@ class BGFWindow(QMainWindow):
                                            self.game_name.text().capitalize()))
 
     def find_by_name(self, name):
+        """
+        the function changes the name of the game with an error to search ONLY BY NAME
+        :param name: str
+        :return: None
+        """
         self.game_name.setText(name)
         self.find_games()
 
@@ -216,16 +231,25 @@ class BGFWindow(QMainWindow):
             for j in range(6):
                 self.textBrowser.setText(self.textBrowser.toPlainText() + form[j] +
                                          (i[j] if j != 4 else db.cur.execute(f'select difficulty from difficulties'
-                                                                             f' where ind = "{i[j]}"').fetchall()[0][
-                                             0])
+                                                                             f' where ind = "{i[j]}"').fetchall()[0][0])
                                          + '\n' + ('\n' if j == 5 else ''))
         self.statusbar.showMessage(f'Поиск успешно выполнен за {round(time.time() - self.timer, 2)} секунд.')
         self.print_timer(f'Вывод успешно выполнен за {round(time.time() - self.timer, 2)} секунд.')
 
-    def print_timer(self, string):
-        print(string)
+    def print_timer(self, timer):
+        """
+        the function outputs to the console the time for which the request was made
+        :param timer: str
+        :return: None
+        """
+        print(timer)
 
     def create_dialog(self, game_name):
+        """
+        the function creates a dialog box in which it clarifies correctly and the user has entered the name of the game
+        :param game_name: str
+        :return: None
+        """
         msg = QMessageBox(self)
         msg.setText(f'Возможно вы имели ввиду {game_name}?')
         msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
@@ -235,10 +259,6 @@ class BGFWindow(QMainWindow):
         elif result == 16384:
             self.game_name.setText(game_name)
             self.find_by_name(game_name)
-
-    """def finder(self, query):
-        return db.cur.execute(query).fetchall()[0][0]
-        """
 
     def except_hook(self, exception, traceback):
         sys.__excepthook__(self, exception, traceback)
