@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>633</width>
-    <height>480</height>
+    <width>800</width>
+    <height>600</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,7 +19,7 @@
      <rect>
       <x>30</x>
       <y>10</y>
-      <width>101</width>
+      <width>141</width>
       <height>31</height>
      </rect>
     </property>
@@ -32,7 +32,7 @@
      <rect>
       <x>30</x>
       <y>50</y>
-      <width>111</width>
+      <width>141</width>
       <height>31</height>
      </rect>
     </property>
@@ -43,9 +43,9 @@
    <widget class="QLabel" name="label_4">
     <property name="geometry">
      <rect>
-      <x>310</x>
+      <x>360</x>
       <y>50</y>
-      <width>111</width>
+      <width>181</width>
       <height>31</height>
      </rect>
     </property>
@@ -56,9 +56,9 @@
    <widget class="QLabel" name="label_5">
     <property name="geometry">
      <rect>
-      <x>310</x>
+      <x>360</x>
       <y>10</y>
-      <width>131</width>
+      <width>181</width>
       <height>31</height>
      </rect>
     </property>
@@ -69,9 +69,9 @@
    <widget class="QComboBox" name="game_diff">
     <property name="geometry">
      <rect>
-      <x>140</x>
+      <x>170</x>
       <y>10</y>
-      <width>141</width>
+      <width>181</width>
       <height>31</height>
      </rect>
     </property>
@@ -99,9 +99,9 @@
    <widget class="QComboBox" name="player_count">
     <property name="geometry">
      <rect>
-      <x>140</x>
+      <x>170</x>
       <y>50</y>
-      <width>141</width>
+      <width>181</width>
       <height>31</height>
      </rect>
     </property>
@@ -114,9 +114,9 @@
    <widget class="QComboBox" name="rec_age">
     <property name="geometry">
      <rect>
-      <x>460</x>
+      <x>550</x>
       <y>10</y>
-      <width>141</width>
+      <width>221</width>
       <height>31</height>
      </rect>
     </property>
@@ -129,9 +129,9 @@
    <widget class="QComboBox" name="game_time">
     <property name="geometry">
      <rect>
-      <x>460</x>
+      <x>550</x>
       <y>50</y>
-      <width>141</width>
+      <width>221</width>
       <height>31</height>
      </rect>
     </property>
@@ -144,9 +144,9 @@
    <widget class="QPushButton" name="find_button">
     <property name="geometry">
      <rect>
-      <x>300</x>
+      <x>460</x>
       <y>90</y>
-      <width>301</width>
+      <width>311</width>
       <height>41</height>
      </rect>
     </property>
@@ -159,8 +159,8 @@
      <rect>
       <x>20</x>
       <y>150</y>
-      <width>591</width>
-      <height>281</height>
+      <width>761</width>
+      <height>391</height>
      </rect>
     </property>
    </widget>
@@ -169,7 +169,7 @@
      <rect>
       <x>30</x>
       <y>90</y>
-      <width>101</width>
+      <width>131</width>
       <height>31</height>
      </rect>
     </property>
@@ -180,10 +180,10 @@
    <widget class="QLineEdit" name="game_name">
     <property name="geometry">
      <rect>
-      <x>140</x>
+      <x>170</x>
       <y>90</y>
-      <width>141</width>
-      <height>31</height>
+      <width>261</width>
+      <height>41</height>
      </rect>
     </property>
    </widget>
@@ -193,7 +193,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>633</width>
+     <width>800</width>
      <height>21</height>
     </rect>
    </property>
