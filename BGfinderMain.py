@@ -1,6 +1,8 @@
 import sys
 import io
-from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QGridLayout, QPushButton, QWidget, QScrollArea,\
+    QLabel
+from PyQt5.QtGui import QPixmap
 from PyQt5 import uic
 import sqlite3
 import time
@@ -169,7 +171,7 @@ class DatabaseQuery:
 class BGFWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        f = io.StringIO(open('BGFinder_design0.0.5.ui', encoding='utf8').read())
+        f = io.StringIO(open('BGFinder_design_testing.ui', encoding='utf8').read())
         uic.loadUi(f, self)
         for i in db.cur.execute('''select distinct age from data''').fetchall():
             self.rec_age.addItem(i[0])
@@ -197,7 +199,6 @@ class BGFWindow(QMainWindow):
         :return: None
         """
         self.timer = time.time()
-        self.textBrowser.clear()
         self.print_timer(f'Поиск выполнен за {round(time.time() - self.timer, 2)} секунд.\n')
         self.plain_text(db.query_generator(self.game_diff.currentText(), self.player_count.currentText(),
                                            self.rec_age.currentText(), self.game_time.currentText(),
@@ -226,13 +227,30 @@ class BGFWindow(QMainWindow):
             4: 'Сложность игры: ',
             5: 'Краткое описание:\n'
         }
-        self.textBrowser.setText('')
+        layout = QGridLayout()
+        generated = ''
         for i in text:
             for j in range(6):
-                self.textBrowser.setText(self.textBrowser.toPlainText() + form[j] +
-                                         (i[j] if j != 4 else db.cur.execute(f'select difficulty from difficulties'
-                                                                             f' where ind = "{i[j]}"').fetchall()[0][0])
-                                         + '\n' + ('\n' if j == 5 else ''))
+                generated = (generated + form[j] +
+                             (i[j] if j != 4 else db.cur.execute(f'select difficulty from difficulties'
+                                                                 f' where ind = "{i[j]}"').fetchall()[0][0])
+                             + '\n' + ('\n' if j == 5 else ''))
+            if generated != '':
+                try:
+                    pixmap = QPixmap(f'images/{i[0]}.jpg')
+                    picture = QLabel(self)
+                    picture.setPixmap(pixmap)
+                    picture.setMaximumSize(720, 600)
+                    layout.addWidget(picture)
+                except:
+                    pass
+                label = QLabel(generated)
+                label.setWordWrap(True)
+                layout.addWidget(label)
+                widget = QWidget()
+                widget.setLayout(layout)
+                self.scrollArea.setWidget(widget)
+            generated = ''
         self.statusbar.showMessage(f'Поиск успешно выполнен за {round(time.time() - self.timer, 2)} секунд.')
         self.print_timer(f'Вывод успешно выполнен за {round(time.time() - self.timer, 2)} секунд.')
 
@@ -278,6 +296,8 @@ if __name__ == '__main__':
 2. Написать свои ошибки для разных ситуаций (ошибка при выводе и тд.)                     ✓
 3. Разделить функцию query_generator класса DatabaseQuery на несколько маленьких          ✓
 4. Написать doc-string к каждой функции                                                   ✓
-5. Заменить текстовый виджет на QScrollArea                                               -
+5. Заменить текстовый виджет на QScrollArea                                               ✓
 6. Добавить возможность добавлять игры в избранное                                        -
+7. Расширь базу данных                                                                    ~
+8. Добавь изображение к каждой игре                                                       ~
 """
