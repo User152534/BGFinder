@@ -237,7 +237,7 @@ class BGFWindow(QMainWindow):
                              + '\n' + ('\n' if j == 5 else ''))
             if generated != '':
                 try:
-                    pixmap = QPixmap(f'images/{i[0]}.jpg')
+                    pixmap = QPixmap(f'{i[0]}.jpg')
                     picture = QLabel(self)
                     picture.setPixmap(pixmap)
                     picture.setMaximumSize(720, 600)
