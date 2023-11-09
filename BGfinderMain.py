@@ -8,7 +8,7 @@ import sqlite3
 import time
 
 
-class EmptySqlResult(Exception):
+class EmptySqlResult(Exception):  # класс исключения на случай если ничего не найдено
     def __init__(self, string):
         if not string:
             self.__str__()
@@ -17,7 +17,7 @@ class EmptySqlResult(Exception):
         return 'ERROR: Nothing found'
 
 
-class WrongName(Exception):
+class WrongName(Exception):  # класс исключения на случай если введенное название игры неверно
     def __init__(self, name):
         self.name = name
         self.names = db.cur.execute('select name from data').fetchall()
@@ -53,7 +53,7 @@ class WrongName(Exception):
 
         print(f'Возможно вы имели ввиду {", ".join(possible_names)}?' if possible_names else 'Ничего не найдено')
         if not self.in_names() and possible_names:
-            ex.create_dialog(", ".join(possible_names))
+            ex.create_dialog(possible_names[0])
 
 
 class DatabaseQuery:
@@ -92,7 +92,19 @@ class DatabaseQuery:
                 raise EmptySqlResult(result)
         except EmptySqlResult:
             print('Nothing found')
+            if not self.new_name_in_names(ex.game_name.text(), self.cur.execute('''select name from data''').fetchall()):
+                ex.scroll_clear()
         return result
+
+    def new_name_in_names(self, name, sql):
+        """
+        the function checks if there is a new installed game name among the game names from the database
+        :param sql: list
+        :param name: str
+        :return: bool
+        """
+        print(name in [i[0] for i in sql])
+        return name in [i[0] for i in sql]
 
     def print_sql_to_console(self, sql):
         """
@@ -170,6 +182,7 @@ class BGFWindow(QMainWindow):
         super().__init__()
         f = io.StringIO(open('BGFinder_design_testing.ui', encoding='utf8').read())
         uic.loadUi(f, self)
+
         for i in db.cur.execute('''select distinct age from data''').fetchall():
             self.rec_age.addItem(i[0])
         for i in db.cur.execute('''select distinct players from data''').fetchall():
@@ -225,6 +238,7 @@ class BGFWindow(QMainWindow):
             4: 'Сложность игры: ',
             5: 'Краткое описание:\n'
         }
+
         layout = QGridLayout()
         generated = ''
         for i in text:
@@ -248,6 +262,7 @@ class BGFWindow(QMainWindow):
                     widget.setLayout(layout)
                     self.scrollArea.setWidget(widget)
             generated = ''
+
         if not self.not_statusbar:
             self.statusbar_print(round(time.time() - self.timer, 2))
         self.print_timer(round(time.time() - self.timer, 2), 'Вывод')
@@ -280,6 +295,7 @@ class BGFWindow(QMainWindow):
         msg.setText(f'Возможно вы имели ввиду {game_name}?')
         msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         result = msg.exec_()
+
         if result == 65536:
             self.scroll_clear()
             msg = QMessageBox(self)
@@ -320,5 +336,7 @@ if __name__ == '__main__':
 5. Заменить текстовый виджет на QScrollArea                                               ✓
 6. Добавить возможность добавлять игры в избранное                                        -
 7. Расширь базу данных                                                                    ~
-8. Добавь изображение к каждой игре                                                       ~
+8. Добавь изображение к каждой игре                                                       ✓
+9. Переделать систему поиска по возрасту игроков                                          -
+10. Добавить комментарии в сложных или непонятных строках кода                            -
 """
