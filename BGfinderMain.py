@@ -55,9 +55,6 @@ class WrongName(Exception):
         if not self.in_names() and possible_names:
             ex.create_dialog(", ".join(possible_names))
 
-        """ex.textBrowser.setText('')
-        ex.textBrowser.setText(f'Возможно вы имели ввиду {", ".join(possible_names)}?')"""
-
 
 class DatabaseQuery:
     def __init__(self):
@@ -180,6 +177,7 @@ class BGFWindow(QMainWindow):
         for i in db.cur.execute('''select distinct time from data''').fetchall():
             self.game_time.addItem(i[0])
 
+        self.not_statusbar = bool()
         self.timer = 0
         self.statusBar()
         self.init_ui()
@@ -199,7 +197,7 @@ class BGFWindow(QMainWindow):
         :return: None
         """
         self.timer = time.time()
-        self.print_timer(f'Поиск выполнен за {round(time.time() - self.timer, 2)} секунд.\n')
+        self.print_timer(round(time.time() - self.timer, 2), 'Поиск')
         self.plain_text(db.query_generator(self.game_diff.currentText(), self.player_count.currentText(),
                                            self.rec_age.currentText(), self.game_time.currentText(),
                                            self.game_name.text().capitalize()))
@@ -237,30 +235,40 @@ class BGFWindow(QMainWindow):
                              + '\n' + ('\n' if j == 5 else ''))
             if generated != '':
                 try:
-                    pixmap = QPixmap(f'{i[0]}.jpg')
+                    pixmap = QPixmap(f'images/{i[0]}.jpg')
                     picture = QLabel(self)
                     picture.setPixmap(pixmap)
                     picture.setMaximumSize(720, 600)
                     layout.addWidget(picture)
-                except:
-                    pass
-                label = QLabel(generated)
-                label.setWordWrap(True)
-                layout.addWidget(label)
-                widget = QWidget()
-                widget.setLayout(layout)
-                self.scrollArea.setWidget(widget)
+                finally:
+                    label = QLabel(generated)
+                    label.setWordWrap(True)
+                    layout.addWidget(label)
+                    widget = QWidget()
+                    widget.setLayout(layout)
+                    self.scrollArea.setWidget(widget)
             generated = ''
-        self.statusbar.showMessage(f'Поиск успешно выполнен за {round(time.time() - self.timer, 2)} секунд.')
-        self.print_timer(f'Вывод успешно выполнен за {round(time.time() - self.timer, 2)} секунд.')
+        if not self.not_statusbar:
+            self.statusbar_print(round(time.time() - self.timer, 2))
+        self.print_timer(round(time.time() - self.timer, 2), 'Вывод')
 
-    def print_timer(self, timer):
+    def statusbar_print(self, timer):
         """
-        the function outputs to the console the time for which the request was made
-        :param timer: str
+        the function sets the value in the statusbar
+        :param timer: int
         :return: None
         """
-        print(timer)
+        self.statusbar.showMessage(f'Поиск успешно выполнен за {timer} секунд.')
+
+    def print_timer(self, timer, action, nothing_found=False):
+        """
+        the function outputs to the console the time for which the request was made
+        :param nothing_found: bool
+        :param action: str
+        :param timer: int
+        :return: None
+        """
+        print('Nothing found' if nothing_found else f'{action} выполнен за {timer} секунд.\n')
 
     def create_dialog(self, game_name):
         """
@@ -273,10 +281,23 @@ class BGFWindow(QMainWindow):
         msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         result = msg.exec_()
         if result == 65536:
-            self.textBrowser.setText('По вашему запросу ничего не найдено.')
+            self.scroll_clear()
+            msg = QMessageBox(self)
+            msg.setText('По Вашему запросу ничего не найдено.')
+            msg.exec()
+            self.not_statusbar = True
         elif result == 16384:
             self.game_name.setText(game_name)
             self.find_by_name(game_name)
+            self.not_statusbar = False
+
+    def scroll_clear(self):
+        """
+        the function clears QScrollArea from text and images
+        :return: None
+        """
+        label = QLabel(self)
+        self.scrollArea.setWidget(label)
 
     def except_hook(self, exception, traceback):
         sys.__excepthook__(self, exception, traceback)
