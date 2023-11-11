@@ -180,7 +180,7 @@ class DatabaseQuery:
 class BGFWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        f = io.StringIO(open('BGFinder_design_testing.ui', encoding='utf8').read())
+        f = io.StringIO(open('BGFinder_design0.0.6.ui', encoding='utf8').read())
         uic.loadUi(f, self)
 
         for i in db.cur.execute('''select distinct age from data''').fetchall():
