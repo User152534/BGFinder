@@ -1,7 +1,7 @@
 import sys
 import io
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QGridLayout, QPushButton, QWidget, QScrollArea,\
-    QLabel
+    QLabel, QButtonGroup
 from PyQt5.QtGui import QPixmap
 from PyQt5 import uic
 import sqlite3
@@ -92,7 +92,8 @@ class DatabaseQuery:
                 raise EmptySqlResult(result)
         except EmptySqlResult:
             print('Nothing found')
-            if not self.new_name_in_names(ex.game_name.text(), self.cur.execute('''select name from data''').fetchall()):
+            if not self.new_name_in_names(ex.game_name.text(),
+                                          self.cur.execute('''select name from data''').fetchall()):
                 ex.scroll_clear()
         return result
 
@@ -191,6 +192,7 @@ class BGFWindow(QMainWindow):
             self.game_time.addItem(i[0])
 
         self.not_statusbar = bool()
+        self.buttons_group = QButtonGroup(self)
         self.timer = 0
         self.statusBar()
         self.init_ui()
@@ -200,7 +202,7 @@ class BGFWindow(QMainWindow):
         the function sets the name of the window and fixes its size
         :return: None
         """
-        self.setWindowTitle('BGFinder0.0.5')
+        self.setWindowTitle('BGFinder0.0.6')
         self.setFixedSize(800, 600)
         self.find_button.clicked.connect(self.find_games)
 
@@ -213,7 +215,7 @@ class BGFWindow(QMainWindow):
         self.print_timer(round(time.time() - self.timer, 2), 'Поиск')
         self.plain_text(db.query_generator(self.game_diff.currentText(), self.player_count.currentText(),
                                            self.rec_age.currentText(), self.game_time.currentText(),
-                                           self.game_name.text().capitalize()))
+                                           self.game_name.text()))
 
     def find_by_name(self, name):
         """
@@ -240,16 +242,19 @@ class BGFWindow(QMainWindow):
         }
 
         layout = QGridLayout()
+        self.buttons_group = QButtonGroup()  # отчищаем кнопки
         generated = ''
         for i in text:
             for j in range(6):
                 generated = (generated + form[j] +
                              (i[j] if j != 4 else db.cur.execute(f'select difficulty from difficulties'
-                                                                 f' where ind = "{i[j]}"').fetchall()[0][0])
-                             + '\n' + ('\n' if j == 5 else ''))
+                                                                 f' where ind = "{i[j]}"').fetchall()[0][0]) + '\n')
             if generated != '':
                 try:
-                    pixmap = QPixmap(f'images/{i[0]}.jpg')
+                    if i[0] == 'Dungeons & Dragons':
+                        pixmap = QPixmap(f'images/{i[0]}.png') # костыль надо в бд сделать таблицу с расширениями
+                    else:
+                        pixmap = QPixmap(f'images/{i[0]}.jpg')
                     picture = QLabel(self)
                     picture.setPixmap(pixmap)
                     picture.setMaximumSize(720, 600)
@@ -258,14 +263,41 @@ class BGFWindow(QMainWindow):
                     label = QLabel(generated)
                     label.setWordWrap(True)
                     layout.addWidget(label)
+                    button = QPushButton(f'Добавить {i[0]} в избранное')
+                    self.buttons_group.addButton(button)
+                    layout.addWidget(button)
+                    layout.addWidget(QLabel('\n\n'))
                     widget = QWidget()
                     widget.setLayout(layout)
                     self.scrollArea.setWidget(widget)
             generated = ''
+            self.buttons_group.buttonClicked.connect(self.add_to_favorites)
 
         if not self.not_statusbar:
             self.statusbar_print(round(time.time() - self.timer, 2))
         self.print_timer(round(time.time() - self.timer, 2), 'Вывод')
+
+    def add_to_favorites(self, button):
+        if not self.in_file(self.name_in_str(button.text())):
+            text = self.get_text()
+            file = open('favorites.txt', 'wt', encoding='utf8')
+            file.write(text + self.name_in_str(button.text()) + '\n')
+            file.close()
+
+    def get_text(self):
+        file = open('favorites.txt', 'rt', encoding='utf8')
+        text = file.read()
+        file.close()
+        return text
+
+    def name_in_str(self, string):
+        return ' '.join(string.split()[1:-2])
+
+    def in_file(self, string):
+        file = open('favorites.txt', 'rt', encoding='utf8')
+        text = file.read()
+        file.close()
+        return string in text
 
     def statusbar_print(self, timer):
         """
@@ -293,8 +325,8 @@ class BGFWindow(QMainWindow):
         """
         msg = QMessageBox(self)
         msg.setText(f'Возможно вы имели ввиду {game_name}?')
-        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-        result = msg.exec_()
+        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)  # устанавливаем кнопки в диалоговое окно
+        result = msg.exec_()  # сохраняем результат
 
         if result == 65536:
             self.scroll_clear()
