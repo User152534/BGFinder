@@ -177,7 +177,7 @@
      </rect>
     </property>
    </widget>
-   <widget class="QCheckBox" name="checkBox">
+   <widget class="QCheckBox" name="favoriteCheckbox">
     <property name="geometry">
      <rect>
       <x>360</x>

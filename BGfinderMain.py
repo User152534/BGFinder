@@ -67,21 +67,22 @@ class DatabaseQuery:
         :param values: tuple
         :return: str
         """
-        game_diff, player_count, rec_age, game_time, game_name = values
+        game_diff, player_count, rec_age, game_time, game_name, favorite = values
 
         dif_str = self.difficulty_sql_generate(game_diff)
         pl_str = self.players_sql_generate(dif_str, player_count)
         age_str = self.age_sql_generate(dif_str, pl_str, rec_age)
         tm_str = self.time_sql_generate(dif_str, pl_str, age_str, game_time)
         nm_str = self.name_sql_generate(dif_str, pl_str, age_str, tm_str, game_name)
+        fav_str = self.is_favorite_generate(dif_str, pl_str, age_str, tm_str, game_name, favorite)
 
         self.print_sql_to_console(f'''select * from data
-                  {('where ' if dif_str + pl_str + age_str + tm_str + nm_str else '') + dif_str + pl_str
-                   + age_str + tm_str + nm_str}\n''')
+                  {('where ' if dif_str + pl_str + age_str + tm_str + nm_str + fav_str else '') + dif_str + pl_str
+                   + age_str + tm_str + nm_str + fav_str}\n''')
 
         result = self.cur.execute(f'''select * from data
-                                      {('where ' if dif_str + pl_str + age_str + tm_str + nm_str else '') + dif_str +
-                                       pl_str + age_str + tm_str + nm_str}''').fetchall()
+                                      {('where ' if dif_str + pl_str + age_str + tm_str + nm_str + fav_str else '') + 
+                                       dif_str + pl_str + age_str + tm_str + nm_str + fav_str}''').fetchall()
         try:
             if game_name != '':
                 raise WrongName(game_name)
@@ -146,7 +147,7 @@ class DatabaseQuery:
         :return: str
         """
         if rec_age != 'Для всех возрастов':
-            return f'{"" if not difficulty and not player_count else "and "}age = "{rec_age}" '
+            return f'{"" if not difficulty and not player_count else "and "}age = "{rec_age[:-1]}" '
         return ''
 
     def time_sql_generate(self, difficulty, player_count, rec_age, game_time):
@@ -177,6 +178,33 @@ class DatabaseQuery:
             return f'{condition}name = "{game_name}"'
         return ''
 
+    def is_favorite_generate(self, difficulty, player_count, rec_age, game_time, game_name, is_favorite):
+        """
+        the function generates the part of the sql query responsible for the name of the game
+        :param difficulty: str
+        :param player_count: str
+        :param rec_age: str
+        :param game_time: str
+        :param game_name: str
+        :param is_favorite: bool
+        :return: str
+        """
+        if is_favorite:
+            condition = ("" if not difficulty and not player_count and not rec_age and not game_time and
+                         not game_name else "and ")
+            return f'{condition}favorite = "1"'
+        return ''
+
+    def get_favorite(self, name):
+        return self.cur.execute(f'''select favorite from data 
+                                    where name = "{name}"''').fetchall()
+
+    def set_favorite(self, name, is_favorite):
+        self.cur.execute(f'''update data
+                           set favorite = {1 if is_favorite == 0 else 0}
+                           where name = "{name}"''').fetchall()
+        self.con.commit()
+
 
 class BGFWindow(QMainWindow):
     def __init__(self):
@@ -184,8 +212,8 @@ class BGFWindow(QMainWindow):
         f = io.StringIO(open('BGFinder_design0.0.6.ui', encoding='utf8').read())
         uic.loadUi(f, self)
 
-        for i in db.cur.execute('''select distinct age from data''').fetchall():
-            self.rec_age.addItem(i[0])
+        for i in sorted(db.cur.execute('''select distinct age from data''').fetchall()):
+            self.rec_age.addItem(f'{str(i[0])}+')
         for i in db.cur.execute('''select distinct players from data''').fetchall():
             self.player_count.addItem(i[0])
         for i in db.cur.execute('''select distinct time from data''').fetchall():
@@ -215,7 +243,7 @@ class BGFWindow(QMainWindow):
         self.print_timer(round(time.time() - self.timer, 2), 'Поиск')
         self.plain_text(db.query_generator(self.game_diff.currentText(), self.player_count.currentText(),
                                            self.rec_age.currentText(), self.game_time.currentText(),
-                                           self.game_name.text()))
+                                           self.game_name.text(), self.favoriteCheckbox.isChecked()))
 
     def find_by_name(self, name):
         """
@@ -240,33 +268,36 @@ class BGFWindow(QMainWindow):
             4: 'Сложность игры: ',
             5: 'Краткое описание:\n'
         }
+        extensions = {  # расширения картинок
+            1: 'jpg',
+            2: 'png'
+        }
 
         layout = QGridLayout()
         self.buttons_group = QButtonGroup()  # отчищаем кнопки
         generated = ''
         for i in text:
             for j in range(6):
-                generated = (generated + form[j] +
-                             (i[j] if j != 4 else db.cur.execute(f'select difficulty from difficulties'
-                                                                 f' where ind = "{i[j]}"').fetchall()[0][0]) + '\n')
+                generated = (generated + form[j] +  # по частям собирает текст для установки в QScrollArea
+                             ((i[j] if j != 3 else f'{str(i[j])}+') if j != 4
+                              else db.cur.execute(f'select difficulty from difficulties'
+                              f' where ind = "{i[j]}"').fetchall()[0][0]) + '\n')
             if generated != '':
-                try:
-                    if i[0] == 'Dungeons & Dragons':
-                        pixmap = QPixmap(f'images/{i[0]}.png') # костыль надо в бд сделать таблицу с расширениями
-                    else:
-                        pixmap = QPixmap(f'images/{i[0]}.jpg')
+                try:  # обходит ошибку на случай если изображения нет
+                    pixmap = QPixmap(f'images/{i[0]}.{extensions[i[-2]]}')
                     picture = QLabel(self)
                     picture.setPixmap(pixmap)
                     picture.setMaximumSize(720, 600)
                     layout.addWidget(picture)
                 finally:
                     label = QLabel(generated)
-                    label.setWordWrap(True)
+                    label.setWordWrap(True)  # авто перенос слов на другую строку
                     layout.addWidget(label)
-                    button = QPushButton(f'Добавить {i[0]} в избранное')
-                    self.buttons_group.addButton(button)
-                    layout.addWidget(button)
-                    layout.addWidget(QLabel('\n\n'))
+                    button = QPushButton(self.get_button_name_to_set(i[0], not i[-1]))
+                    # not потому что нужно противоположное значение для правильного текста на кнопке
+                    self.buttons_group.addButton(button)  # добавляем кнопку в группу кнопок
+                    layout.addWidget(button)  # добавляем кнопку на QScrollArea
+                    layout.addWidget(QLabel('\n\n'))  # разделитель между двумя играми
                     widget = QWidget()
                     widget.setLayout(layout)
                     self.scrollArea.setWidget(widget)
@@ -275,29 +306,24 @@ class BGFWindow(QMainWindow):
 
         if not self.not_statusbar:
             self.statusbar_print(round(time.time() - self.timer, 2))
+            # устанавливает за сколько времени был выполнен поиск в статусбар
         self.print_timer(round(time.time() - self.timer, 2), 'Вывод')
 
-    def add_to_favorites(self, button):
-        if not self.in_file(self.name_in_str(button.text())):
-            text = self.get_text()
-            file = open('favorites.txt', 'wt', encoding='utf8')
-            file.write(text + self.name_in_str(button.text()) + '\n')
-            file.close()
-
-    def get_text(self):
-        file = open('favorites.txt', 'rt', encoding='utf8')
-        text = file.read()
-        file.close()
-        return text
-
-    def name_in_str(self, string):
+    def name_in_str(self, string):  # возвращает название игры с кнопки
         return ' '.join(string.split()[1:-2])
 
-    def in_file(self, string):
-        file = open('favorites.txt', 'rt', encoding='utf8')
-        text = file.read()
-        file.close()
-        return string in text
+    def add_to_favorites(self, button):  # добавляет в избранное
+        name = self.name_in_str(button.text())
+        is_favorite = db.get_favorite(name)[0][0]  # геттер из бд возвращает 1 или 0 есть ли в избранном
+        db.set_favorite(name, is_favorite)  # добавляет в избранное
+        button.setText(self.get_button_name_to_set(name, is_favorite))  # меняем название кнопки
+        self.buttons_group.buttonClicked.disconnect()
+        self.buttons_group.buttonClicked.connect(self.add_to_favorites)
+        # 319-320. отключаем и подключаем группу кнопок к функции чтобы она не вызвалась повторно
+        self.find_games()  # заново выполняем поиск, чтобы показать изменения
+
+    def get_button_name_to_set(self, name, is_favorite):
+        return f'Удалить {name} из избранного' if not is_favorite else f'Добавить {name} в избранное'
 
     def statusbar_print(self, timer):
         """
@@ -329,15 +355,15 @@ class BGFWindow(QMainWindow):
         result = msg.exec_()  # сохраняем результат
 
         if result == 65536:
-            self.scroll_clear()
-            msg = QMessageBox(self)
+            self.scroll_clear()  # отчищает ScrollArea
+            msg = QMessageBox(self)  # уведомляет пользователя о том что ничего не найдено
             msg.setText('По Вашему запросу ничего не найдено.')
             msg.exec()
             self.not_statusbar = True
-        elif result == 16384:
+        elif result == 16384:  # исправляет неправильное название на правильное и выполняет поиск
             self.game_name.setText(game_name)
             self.find_by_name(game_name)
-            self.not_statusbar = False
+            self.not_statusbar = False  # переменная для временного выключения статусбара
 
     def scroll_clear(self):
         """
@@ -366,9 +392,10 @@ if __name__ == '__main__':
 3. Разделить функцию query_generator класса DatabaseQuery на несколько маленьких          ✓
 4. Написать doc-string к каждой функции                                                   ✓
 5. Заменить текстовый виджет на QScrollArea                                               ✓
-6. Добавить возможность добавлять игры в избранное                                        -
+6. Добавить возможность добавлять игры в избранное                                        ✓
 7. Расширь базу данных                                                                    ~
 8. Добавь изображение к каждой игре                                                       ✓
 9. Переделать систему поиска по возрасту игроков                                          -
-10. Добавить комментарии в сложных или непонятных строках кода                            -
+10. Добавить комментарии в сложных или непонятных строках кода                            ~
+11. Переделать систему поиска игры по количеству игроков (возможно через QSpinBox)        -
 """
