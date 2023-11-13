@@ -69,7 +69,7 @@ class DatabaseQuery:
         """
         game_diff, player_count, rec_age, game_time, game_name, favorite = values
 
-        dif_str = self.difficulty_sql_generate(game_diff)
+        dif_str = self.difficulty_sql_generate(game_diff)  # по кусочкам собирает sql запрос
         pl_str = self.players_sql_generate(dif_str, player_count)
         age_str = self.age_sql_generate(dif_str, pl_str, rec_age)
         tm_str = self.time_sql_generate(dif_str, pl_str, age_str, game_time)
@@ -85,12 +85,12 @@ class DatabaseQuery:
                                        dif_str + pl_str + age_str + tm_str + nm_str + fav_str}''').fetchall()
         try:
             if game_name != '':
-                raise WrongName(game_name)
+                raise WrongName(game_name)  # проверка исключения неправильного имени
         except WrongName:
             print('Wrong game name')
         try:
             if not result:
-                raise EmptySqlResult(result)
+                raise EmptySqlResult(result)  # проверка исключения пустого результата
         except EmptySqlResult:
             print('Nothing found')
             if not self.new_name_in_names(ex.game_name.text(),
@@ -147,7 +147,7 @@ class DatabaseQuery:
         :return: str
         """
         if rec_age != 'Для всех возрастов':
-            return f'{"" if not difficulty and not player_count else "and "}age = "{rec_age[:-1]}" '
+            return f'{"" if not difficulty and not player_count else "and "}age > {int(rec_age[:-1]) - 1} '
         return ''
 
     def time_sql_generate(self, difficulty, player_count, rec_age, game_time):
@@ -195,11 +195,22 @@ class DatabaseQuery:
             return f'{condition}favorite = "1"'
         return ''
 
-    def get_favorite(self, name):
+    def get_favorite(self, name):  # функция возвращает 1 или 0 в зависимости от того находится ли игра в избранном
+        """
+        the function returns 1 or 0 depending on whether the game is in favorites
+        :param name: str
+        :return: int
+        """
         return self.cur.execute(f'''select favorite from data 
                                     where name = "{name}"''').fetchall()
 
-    def set_favorite(self, name, is_favorite):
+    def set_favorite(self, name, is_favorite):  # меняет бд, добавляет игру в избранное
+        """
+        the function changes the database by adding the game to favorites
+        :param name: str
+        :param is_favorite: int
+        :return:
+        """
         self.cur.execute(f'''update data
                            set favorite = {1 if is_favorite == 0 else 0}
                            where name = "{name}"''').fetchall()
@@ -209,16 +220,9 @@ class DatabaseQuery:
 class BGFWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        f = io.StringIO(open('BGFinder_design0.0.6.ui', encoding='utf8').read())
+        f = io.StringIO(open('BGFinder_design0.0.6.ui', encoding='utf8').read())  # загружает дизайн
         uic.loadUi(f, self)
-
-        for i in sorted(db.cur.execute('''select distinct age from data''').fetchall()):
-            self.rec_age.addItem(f'{str(i[0])}+')
-        for i in db.cur.execute('''select distinct players from data''').fetchall():
-            self.player_count.addItem(i[0])
-        for i in db.cur.execute('''select distinct time from data''').fetchall():
-            self.game_time.addItem(i[0])
-
+        self.add_values_to_sort()
         self.not_statusbar = bool()
         self.buttons_group = QButtonGroup(self)
         self.timer = 0
@@ -232,7 +236,7 @@ class BGFWindow(QMainWindow):
         """
         self.setWindowTitle('BGFinder0.0.6')
         self.setFixedSize(800, 600)
-        self.find_button.clicked.connect(self.find_games)
+        self.find_button.clicked.connect(self.find_games)  # подключает функцию к кнопке поиска
 
     def find_games(self):
         """
@@ -244,6 +248,18 @@ class BGFWindow(QMainWindow):
         self.plain_text(db.query_generator(self.game_diff.currentText(), self.player_count.currentText(),
                                            self.rec_age.currentText(), self.game_time.currentText(),
                                            self.game_name.text(), self.favoriteCheckbox.isChecked()))
+
+    def add_values_to_sort(self):  # добавляет значения в виджеты для сортировки
+        """
+        the function sets values to widgets for sorting
+        :return: None
+        """
+        for i in sorted(db.cur.execute('''select distinct age from data''').fetchall()):  # устанавливает возраст
+            self.rec_age.addItem(f'{str(i[0])}+')
+        for i in db.cur.execute('''select distinct players from data''').fetchall():  # количество игроков
+            self.player_count.addItem(i[0])
+        for i in db.cur.execute('''select distinct time from data''').fetchall():  # время на игру
+            self.game_time.addItem(i[0])
 
     def find_by_name(self, name):
         """
@@ -293,14 +309,14 @@ class BGFWindow(QMainWindow):
                     label = QLabel(generated)
                     label.setWordWrap(True)  # авто перенос слов на другую строку
                     layout.addWidget(label)
-                    button = QPushButton(self.get_button_name_to_set(i[0], not i[-1]))
+                    button = QPushButton(self.get_button_name_to_set(i[0], not i[-1]))  # делаем кнопку
                     # not потому что нужно противоположное значение для правильного текста на кнопке
                     self.buttons_group.addButton(button)  # добавляем кнопку в группу кнопок
                     layout.addWidget(button)  # добавляем кнопку на QScrollArea
                     layout.addWidget(QLabel('\n\n'))  # разделитель между двумя играми
                     widget = QWidget()
                     widget.setLayout(layout)
-                    self.scrollArea.setWidget(widget)
+                    self.scrollArea.setWidget(widget)  # устанавливаем виджет на QScrollArea
             generated = ''
             self.buttons_group.buttonClicked.connect(self.add_to_favorites)
 
@@ -310,19 +326,35 @@ class BGFWindow(QMainWindow):
         self.print_timer(round(time.time() - self.timer, 2), 'Вывод')
 
     def name_in_str(self, string):  # возвращает название игры с кнопки
+        """
+        the function returns the name of the game from the button
+        :param string: str
+        :return: str
+        """
         return ' '.join(string.split()[1:-2])
 
     def add_to_favorites(self, button):  # добавляет в избранное
+        """
+        the function adds the game to favorites
+        :param button: QBushButton
+        :return: None
+        """
         name = self.name_in_str(button.text())
         is_favorite = db.get_favorite(name)[0][0]  # геттер из бд возвращает 1 или 0 есть ли в избранном
         db.set_favorite(name, is_favorite)  # добавляет в избранное
         button.setText(self.get_button_name_to_set(name, is_favorite))  # меняем название кнопки
         self.buttons_group.buttonClicked.disconnect()
         self.buttons_group.buttonClicked.connect(self.add_to_favorites)
-        # 319-320. отключаем и подключаем группу кнопок к функции чтобы она не вызвалась повторно
+        # 346-347. отключаем и подключаем группу кнопок к функции чтобы она не вызвалась повторно
         self.find_games()  # заново выполняем поиск, чтобы показать изменения
 
-    def get_button_name_to_set(self, name, is_favorite):
+    def get_button_name_to_set(self, name, is_favorite):  # функция возвращает строку которая, устанавливается на кнопку
+        """
+        the function returns a string that is set to the button
+        :param name: str
+        :param is_favorite: int
+        :return: str
+        """
         return f'Удалить {name} из избранного' if not is_favorite else f'Добавить {name} в избранное'
 
     def statusbar_print(self, timer):
@@ -395,7 +427,7 @@ if __name__ == '__main__':
 6. Добавить возможность добавлять игры в избранное                                        ✓
 7. Расширь базу данных                                                                    ~
 8. Добавь изображение к каждой игре                                                       ✓
-9. Переделать систему поиска по возрасту игроков                                          -
-10. Добавить комментарии в сложных или непонятных строках кода                            ~
+9. Переделать систему поиска по возрасту игроков                                          ✓
+10. Добавить комментарии в сложных или непонятных строках кода                            ✓
 11. Переделать систему поиска игры по количеству игроков (возможно через QSpinBox)        -
 """
