@@ -134,8 +134,8 @@ class DatabaseQuery:
         :param player_count: str
         :return: str
         """
-        if player_count != 'Любое':
-            return f'{"" if not difficulty else "and "}players = "{player_count}" '
+        if player_count != 0:
+            return f'{"" if not difficulty else "and "}players_min <= {player_count} and players_max >= {player_count} '
         return ''
 
     def age_sql_generate(self, difficulty, player_count, rec_age):
@@ -220,9 +220,9 @@ class DatabaseQuery:
 class BGFWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        f = io.StringIO(open('BGFinder_design0.0.6.ui', encoding='utf8').read())  # загружает дизайн
+        f = io.StringIO(open('BGFinder_design0.0.7.ui', encoding='utf8').read())  # загружает дизайн
         uic.loadUi(f, self)
-        self.add_values_to_sort()
+        self.add_values_to_sort()  # устанавливает значения в некоторые виджеты
         self.not_statusbar = bool()
         self.buttons_group = QButtonGroup(self)
         self.timer = 0
@@ -245,7 +245,7 @@ class BGFWindow(QMainWindow):
         """
         self.timer = time.time()
         self.print_timer(round(time.time() - self.timer, 2), 'Поиск')
-        self.plain_text(db.query_generator(self.game_diff.currentText(), self.player_count.currentText(),
+        self.plain_text(db.query_generator(self.game_diff.currentText(), self.player_count.value(),
                                            self.rec_age.currentText(), self.game_time.currentText(),
                                            self.game_name.text(), self.favoriteCheckbox.isChecked()))
 
@@ -256,8 +256,6 @@ class BGFWindow(QMainWindow):
         """
         for i in sorted(db.cur.execute('''select distinct age from data''').fetchall()):  # устанавливает возраст
             self.rec_age.addItem(f'{str(i[0])}+')
-        for i in db.cur.execute('''select distinct players from data''').fetchall():  # количество игроков
-            self.player_count.addItem(i[0])
         for i in db.cur.execute('''select distinct time from data''').fetchall():  # время на игру
             self.game_time.addItem(i[0])
 
@@ -279,10 +277,11 @@ class BGFWindow(QMainWindow):
         form = {
             0: 'Название игры: ',
             1: 'Количество игроков: ',
-            2: 'Длительность одной игры: ',
-            3: 'Возраст игроков: ',
-            4: 'Сложность игры: ',
-            5: 'Краткое описание:\n'
+            2: '',
+            3: 'Длительность одной игры: ',
+            4: 'Возраст игроков: ',
+            5: 'Сложность игры: ',
+            6: 'Краткое описание:\n'
         }
         extensions = {  # расширения картинок
             1: 'jpg',
@@ -293,11 +292,11 @@ class BGFWindow(QMainWindow):
         self.buttons_group = QButtonGroup()  # отчищаем кнопки
         generated = ''
         for i in text:
-            for j in range(6):
+            for j in range(7):
                 generated = (generated + form[j] +  # по частям собирает текст для установки в QScrollArea
-                             ((i[j] if j != 3 else f'{str(i[j])}+') if j != 4
+                             (((str(i[j]) if j != 1 else f'{i[j]}-') if j != 4 else f'{str(i[j])}+') if j != 5
                               else db.cur.execute(f'select difficulty from difficulties'
-                              f' where ind = "{i[j]}"').fetchall()[0][0]) + '\n')
+                              f' where ind = "{i[j]}"').fetchall()[0][0]) + ('\n' if j != 1 else ''))
             if generated != '':
                 try:  # обходит ошибку на случай если изображения нет
                     pixmap = QPixmap(f'images/{i[0]}.{extensions[i[-2]]}')
@@ -429,5 +428,6 @@ if __name__ == '__main__':
 8. Добавь изображение к каждой игре                                                       ✓
 9. Переделать систему поиска по возрасту игроков                                          ✓
 10. Добавить комментарии в сложных или непонятных строках кода                            ✓
-11. Переделать систему поиска игры по количеству игроков (возможно через QSpinBox)        -
+11. Переделать систему поиска игры по количеству игроков (возможно через QSpinBox)        ✓
+12. Починить баг с добавлением в избранное                                                ✓
 """
