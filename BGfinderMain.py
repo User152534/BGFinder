@@ -234,8 +234,9 @@ class BGFWindow(QMainWindow):
         the function sets the name of the window and fixes its size
         :return: None
         """
-        self.setWindowTitle('BGFinder0.0.6')
+        self.setWindowTitle('BGFinder0.1.7')
         self.setFixedSize(800, 600)
+        # self.setWindowIcon(QtGui.QIcon('icon.png'))
         self.find_button.clicked.connect(self.find_games)  # подключает функцию к кнопке поиска
 
     def find_games(self):
@@ -244,7 +245,7 @@ class BGFWindow(QMainWindow):
         :return: None
         """
         self.timer = time.time()
-        self.print_timer(round(time.time() - self.timer, 2), 'Поиск')
+        self.print_timer(round(time.time() - self.timer, 2), 'Поиск')  # вывод таймера
         self.plain_text(db.query_generator(self.game_diff.currentText(), self.player_count.value(),
                                            self.rec_age.currentText(), self.game_time.currentText(),
                                            self.game_name.text(), self.favoriteCheckbox.isChecked()))
@@ -259,14 +260,25 @@ class BGFWindow(QMainWindow):
         for i in db.cur.execute('''select distinct time from data''').fetchall():  # время на игру
             self.game_time.addItem(i[0])
 
-    def find_by_name(self, name):
+    def find_by_name(self, name: str):  # вызывается только при диалоговом окне
         """
         the function changes the name of the game with an error to search ONLY BY NAME
         :param name: str
         :return: None
         """
-        self.game_name.setText(name)
-        self.find_games()
+        self.game_name.setText(name)  # устанавливает имя, которое было исправлено
+        self.clear_finder_values()
+        self.find_games()  # поиск игр
+
+    def clear_finder_values(self):  # устанавливает первоначальные значения в переменные
+        """
+        the function sets the initial values to widgets for sorting
+        :return: None
+        """
+        self.game_diff.setCurrentText('Любая')
+        self.player_count.setValue(0)
+        self.rec_age.setCurrentText('Для всех возрастов')
+        self.game_time.setCurrentText('Неограниченно')
 
     def plain_text(self, text):
         """
@@ -415,19 +427,3 @@ if __name__ == '__main__':
     ex.show()
     sys.excepthook = ex.except_hook
     sys.exit(app.exec())
-
-"""
-идеи:
-1. сделать поиск похожих по названию (если пользователь ошибся в названии)                ✓
-2. Написать свои ошибки для разных ситуаций (ошибка при выводе и тд.)                     ✓
-3. Разделить функцию query_generator класса DatabaseQuery на несколько маленьких          ✓
-4. Написать doc-string к каждой функции                                                   ✓
-5. Заменить текстовый виджет на QScrollArea                                               ✓
-6. Добавить возможность добавлять игры в избранное                                        ✓
-7. Расширь базу данных                                                                    ~
-8. Добавь изображение к каждой игре                                                       ✓
-9. Переделать систему поиска по возрасту игроков                                          ✓
-10. Добавить комментарии в сложных или непонятных строках кода                            ✓
-11. Переделать систему поиска игры по количеству игроков (возможно через QSpinBox)        ✓
-12. Починить баг с добавлением в избранное                                                ✓
-"""
