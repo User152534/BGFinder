@@ -2,7 +2,7 @@ import sys
 import io
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QGridLayout, QPushButton, QWidget, QScrollArea, \
     QLabel, QButtonGroup
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5 import uic
 import sqlite3
 import time
@@ -237,7 +237,7 @@ class BGFWindow(QMainWindow):
         """
         self.setWindowTitle('BGFinder0.2.1')
         self.setFixedSize(800, 600)
-        # self.setWindowIcon(QtGui.QIcon('icon.png'))
+        self.setWindowIcon(QIcon('images/icon.jpg'))
         self.find_button.clicked.connect(self.find_games)  # подключает функцию к кнопке поиска
         self.game_time.valueChanged.connect(self.changed_game_time)
 
